@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `diskon` MODIFY `tanggal_akhir` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3);

@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = "mysql://root@localhost:3306/kantin"
+}
+
+enum status {
+  belum_dimasak
+  dimasak
+  diantar
+  sampai
+}
+
+enum jenis {
+  makanan
+  minuman
+}
+
+enum role {
+  admin_stan
+  siswa
+}
+
+model transaksi {
+  Id               Int                @id @default(autoincrement())
+  name             String             @default("")
+  tanggal          DateTime           @default(now())
+  id_stan          Int                @default(0)
+  id_siswa         Int                @default(0)
+  status           status             @default(belum_dimasak)
+  stan_detail_tr   stan               @relation(fields: [id_stan], references: [Id], onDelete: Cascade)
+  siswa_detail_tr  siswa              @relation(fields: [id_siswa], references: [Id], onDelete: Cascade)
+  detail_transaksi detail_transaksi[]
+}
+
+model siswa {
+  Id             Int         @id @default(autoincrement())
+  nama_siswa     String      @default("")
+  alamat         String      @default("")
+  telp           String      @default("")
+  id_user        Int         @default(0)
+  foto           String      @default("")
+  updated_at     DateTime    @default(now())
+  user_detail_sw users       @relation(fields: [id_user], references: [Id], onDelete: Cascade)
+  transaksi      transaksi[]
+}
+
+model stan {
+  Id             Int         @id @default(autoincrement())
+  nama_stan      String      @default("")
+  nama_pemilik   String      @default("")
+  Telp           String      @default("")
+  id_user        Int         @default(0)
+  user_detail_st users       @relation(fields: [id_user], references: [Id], onDelete: Cascade)
+  updated_at     DateTime    @default(now())
+  transaksi      transaksi[]
+  menu           menu[]
+  diskon         diskon[]
+}
+
+model detail_transaksi {
+  Id                  Int       @id @default(autoincrement())
+  id_transaksi        Int       @default(0)
+  id_menu             Int       @default(0)
+  qty                 Int       @default(0)
+  harga_beli          Float     @default(0) @db.Double
+  updated_at          DateTime  @default(now())
+  transaksi_detail_dt transaksi @relation(fields: [id_transaksi], references: [Id])
+  menu_detail_dt      menu      @relation(fields: [id_menu], references: [Id])
+}
+
+model menu {
+  Id               Int                @id @default(autoincrement())
+  nama_makanan     String             @default("")
+  harga            Float              @default(0) @db.Double
+  jenis            jenis              @default(makanan)
+  foto             String             @default("")
+  deskripsi        String             @default("")
+  id_stan          Int                @default(0)
+  updated_at       DateTime           @default(now())
+  stan_detail_mu   stan               @relation(fields: [id_stan], references: [Id])
+  detail_transaksi detail_transaksi[]
+  menu_diskon      menu_diskon[]
+}
+
+model users {
+  Id         Int      @id @default(autoincrement())
+  username   String   @default("")
+  password   String   @default("")
+  role       role     @default(siswa)
+  updated_at DateTime @default(now())
+  siswa      siswa[]
+  stan       stan[]
+}
+
+model diskon {
+  Id                Int           @id @default(autoincrement())
+  id_stan           Int           @default(0)
+  nama_diskon       String        @default("")
+  persentase_diskon Float         @default(0) @db.Double
+  tanggal_awal      DateTime      @default(now())
+  tanggal_akhir     DateTime      @default(now())
+  stan_detail_ds    stan          @relation(fields: [id_stan], references: [Id])
+  menu_diskon       menu_diskon[]
+}
+
+model menu_diskon {
+  Id               Int    @id @default(autoincrement())
+  id_menu          Int    @default(0)
+  id_diskon        Int    @default(0)
+  menu_detail_md   menu   @relation(fields: [id_menu], references: [Id])
+  diskon_detail_md diskon @relation(fields: [id_diskon], references: [Id])
+}
