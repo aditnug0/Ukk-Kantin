@@ -212,8 +212,23 @@ const readDiskon = async (request: Request, response: Response) => {
 //     }
 // };
 
-const updateDiskon = async (request: Request, response: Response) => {
+const updateDiskon = async (request: AuthRequest, response: Response) => {
     try {
+
+        const { Id: userId } = request.user!;
+
+        if (!userId) {
+            return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
+        }
+
+        const existingStan = await prisma.stan.findFirst({
+            where: { id_user: userId }
+        });
+
+        if (!existingStan) {
+            return response.status(401).json({ status: false, message: "Not found" });
+        }
+
         // Assume user Id is passed as a URL parameter
         const { Id } = request.params;
         // const { username, password, role, stan } = request.body;
@@ -245,6 +260,7 @@ const updateDiskon = async (request: Request, response: Response) => {
                 where: { Id: Number(Id) },
                 data: {
                     // id_stan: id_stan ?? undefined,
+                    id_stan: existingStan.Id,
                     nama_diskon: nama_diskon ?? undefined,
                     persentase_diskon: persentase_diskon ?? undefined,
 
@@ -325,8 +341,26 @@ const updateDiskon = async (request: Request, response: Response) => {
 };
 
 
-const deleteDiskon = async (request: Request, response: Response) => {
+const deleteDiskon = async (request: AuthRequest, response: Response) => {
     try {
+
+
+        const { Id: userId } = request.user!;
+
+        if (!userId) {
+            return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
+        }
+
+        const existingStan = await prisma.stan.findFirst({
+            where: { id_user: userId }
+        });
+
+        if (!existingStan) {
+            return response.status(401).json({ status: false, message: "Not found" });
+        }
+
+        // line
+
         const { Id } = request.params;
 
         if (!Id) {
@@ -341,8 +375,9 @@ const deleteDiskon = async (request: Request, response: Response) => {
 
         // Check if transaksi exists
         const existingDiskon = await prisma.diskon.findUnique({
-            where: { Id: diskonId },
+            where: { Id: diskonId, id_stan: existingStan.Id },
             include: { menu_diskon: true }
+
         });
 
         if (!existingDiskon) {

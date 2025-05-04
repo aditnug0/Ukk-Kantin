@@ -123,8 +123,23 @@ export const createMenu = async (request: AuthRequest, response: Response) => {
 // }
 
 
-export const updateMenu = async (request: Request, response: Response) => {
+export const updateMenu = async (request: AuthRequest, response: Response) => {
     try {
+
+        const { Id: userId } = request.user!;
+
+        if (!userId) {
+            return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
+        }
+
+        const existingStan = await prisma.stan.findFirst({
+            where: { id_user: userId }
+        });
+
+        if (!existingStan) {
+            return response.status(401).json({ status: false, message: "Not found" });
+        }
+
         const { Id } = request.params;
         const { nama_makanan, harga, jenis, foto, deskripsi, } = request.body /** get requested data (data has been sent from request) */
 
@@ -156,6 +171,7 @@ export const updateMenu = async (request: Request, response: Response) => {
                 jenis: jenis ? (jenis) : findMenu.jenis,
                 foto: filename,
                 deskripsi: deskripsi ? String(deskripsi) : findMenu.deskripsi,
+                id_stan: existingStan.Id
 
             },
 

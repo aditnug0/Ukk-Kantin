@@ -330,8 +330,24 @@ const updateTransaksi = async (request: Request, response: Response) => {
 
 
 
-const deleteTransaksi = async (request: Request, response: Response) => {
+const deleteTransaksi = async (request: AuthRequest, response: Response) => {
     try {
+
+
+        const { Id: userId } = request.user!;
+
+        if (!userId) {
+            return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
+        }
+
+        const existingStan = await prisma.stan.findFirst({
+            where: { id_user: userId }
+        });
+
+        if (!existingStan) {
+            return response.status(401).json({ status: false, message: "Not found" });
+        }
+
         const { Id } = request.params;
 
         if (!Id) {
@@ -346,7 +362,7 @@ const deleteTransaksi = async (request: Request, response: Response) => {
 
         // Check if transaksi exists
         const existingTransaksi = await prisma.transaksi.findUnique({
-            where: { Id: transaksiId },
+            where: { Id: transaksiId, id_stan: existingStan.Id },
             include: { detail_transaksi: true }
         });
 
