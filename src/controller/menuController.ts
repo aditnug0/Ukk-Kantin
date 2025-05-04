@@ -125,28 +125,41 @@ export const createMenu = async (request: AuthRequest, response: Response) => {
 
 export const updateMenu = async (request: AuthRequest, response: Response) => {
     try {
-
         const { Id: userId } = request.user!;
 
         if (!userId) {
             return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
         }
 
-        const existingStan = await prisma.stan.findFirst({
-            where: { id_user: userId }
-        });
-
-        if (!existingStan) {
-            return response.status(401).json({ status: false, message: "Not found" });
+        const { Id } = request.params;
+        const mnId = Number(Id);
+        if (isNaN(mnId)) {
+            return response.status(401).json({ status: false, message: "Invalid ID" });
         }
 
-        const { Id } = request.params;
-        const { nama_makanan, harga, jenis, foto, deskripsi, } = request.body /** get requested data (data has been sent from request) */
-
-        const findMenu = await prisma.menu.findFirst({ where: { Id: Number(Id) } });
+        const findMenu = await prisma.menu.findFirst({ where: { Id: mnId } });
         if (!findMenu) {
             return response.status(404).json({ status: false, message: `Menu is not found` });
         }
+
+        // Get the stan belonging to the authenticated user
+        const userStan = await prisma.stan.findFirst({
+            where: { id_user: userId },
+        });
+
+        if (!userStan || userStan.Id !== findMenu.id_stan) {
+            return response.status(403).json({
+                status: false,
+                message: "Forbidden: You do not have access to update this menu",
+            });
+        }
+
+        const { nama_makanan, harga, jenis, foto, deskripsi, } = request.body /** get requested data (data has been sent from request) */
+
+        // const findMenu = await prisma.menu.findFirst({ where: { Id: Number(Id) } });
+        // if (!findMenu) {
+        //     return response.status(404).json({ status: false, message: `Menu is not found` });
+        // }
 
         let filename = findMenu.foto; // Default value based on existing image
 
@@ -164,14 +177,14 @@ export const updateMenu = async (request: AuthRequest, response: Response) => {
         }
 
         const updatedMenu = await prisma.menu.update({
-            where: { Id: Number(Id) },
+            where: { Id: mnId },
             data: {
                 nama_makanan: nama_makanan ? String(nama_makanan) : findMenu.nama_makanan,
                 harga: harga ? Number(harga) : findMenu.harga,
                 jenis: jenis ? (jenis) : findMenu.jenis,
                 foto: filename,
                 deskripsi: deskripsi ? String(deskripsi) : findMenu.deskripsi,
-                id_stan: existingStan.Id
+                // id_stan: existingStan.Id
 
             },
 
@@ -190,13 +203,35 @@ export const updateMenu = async (request: AuthRequest, response: Response) => {
     }
 };
 
-export const deleteMenu = async (request: Request, response: Response) => {
+export const deleteMenu = async (request: AuthRequest, response: Response) => {
     try {
-        const { Id } = request.params;
+        const { Id: userId } = request.user!;
 
-        const findMenu = await prisma.menu.findFirst({ where: { Id: Number(Id) } });
+        if (!userId) {
+            return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
+        }
+
+        const { Id } = request.params;
+        const mnId = Number(Id);
+        if (isNaN(mnId)) {
+            return response.status(401).json({ status: false, message: "Invalid ID" });
+        }
+
+        const findMenu = await prisma.menu.findFirst({ where: { Id: mnId } });
         if (!findMenu) {
             return response.status(404).json({ status: false, message: `Menu is not found` });
+        }
+
+        // Get the stan belonging to the authenticated user
+        const userStan = await prisma.stan.findFirst({
+            where: { id_user: userId },
+        });
+
+        if (!userStan || userStan.Id !== findMenu.id_stan) {
+            return response.status(403).json({
+                status: false,
+                message: "Forbidden: You do not have access to update this menu",
+            });
         }
 
         const imagePath = `${BASE_URL}/public/stan/${findMenu.foto}`;
@@ -206,7 +241,7 @@ export const deleteMenu = async (request: Request, response: Response) => {
             fs.unlinkSync(imagePath);
         }
 
-        const deletedMenu = await prisma.menu.delete({ where: { Id: Number(Id) } });
+        const deletedMenu = await prisma.menu.delete({ where: { Id: mnId } });
 
         return response.json({
             status: true,

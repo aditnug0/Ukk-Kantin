@@ -214,31 +214,42 @@ const readDiskon = async (request: Request, response: Response) => {
 
 const updateDiskon = async (request: AuthRequest, response: Response) => {
     try {
-
         const { Id: userId } = request.user!;
 
         if (!userId) {
             return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
         }
 
-        const existingStan = await prisma.stan.findFirst({
-            where: { id_user: userId }
-        });
-
-        if (!existingStan) {
-            return response.status(401).json({ status: false, message: "Not found" });
+        const { Id } = request.params;
+        const dsId = Number(Id);
+        if (isNaN(dsId)) {
+            return response.status(401).json({ status: false, message: "Invalid ID" });
         }
 
-        // Assume user Id is passed as a URL parameter
-        const { Id } = request.params;
+        const findDiskon = await prisma.diskon.findFirst({ where: { Id: dsId } });
+        if (!findDiskon) {
+            return response.status(404).json({ status: false, message: `Diskon is not found` });
+        }
+
+        // Get the stan belonging to the authenticated user
+        const userStan = await prisma.stan.findFirst({
+            where: { id_user: userId },
+        });
+
+        if (!userStan || userStan.Id !== findDiskon.id_stan) {
+            return response.status(403).json({
+                status: false,
+                message: "Forbidden: You do not have access to update this menu",
+            });
+        }
         // const { username, password, role, stan } = request.body;
         const { id_stan, nama_diskon, persentase_diskon, tanggal_awal, tanggal_akhir, menu_diskon } = request.body;
 
-        // Find existing siswa
-        const findDiskon = await prisma.diskon.findUnique({ where: { Id: Number(Id) } });
-        if (!findDiskon) {
-            return response.status(404).json({ status: false, message: "Diskon not found" });
-        }
+        // // Find existing diskon
+        // const findDiskon = await prisma.diskon.findUnique({ where: { Id: Number(Id) } });
+        // if (!findDiskon) {
+        //     return response.status(404).json({ status: false, message: "Diskon not found" });
+        // }
 
         if (!Id) {
             return response.status(400).json({
@@ -257,10 +268,10 @@ const updateDiskon = async (request: AuthRequest, response: Response) => {
         const result = await prisma.$transaction(async (prisma) => {
             // Update user. If password is provided, hash it; otherwise, leave as is.
             const updatedDiskon = await prisma.diskon.update({
-                where: { Id: Number(Id) },
+                where: { Id: dsId },
                 data: {
                     // id_stan: id_stan ?? undefined,
-                    id_stan: existingStan.Id,
+                    // id_stan: existingStan.Id,
                     nama_diskon: nama_diskon ?? undefined,
                     persentase_diskon: persentase_diskon ?? undefined,
 
@@ -344,6 +355,14 @@ const updateDiskon = async (request: AuthRequest, response: Response) => {
 const deleteDiskon = async (request: AuthRequest, response: Response) => {
     try {
 
+        // const { Id } = request.params;
+
+        // if (!Id) {
+        //     return response.status(400).json({
+        //         status: false,
+        //         message: "ID required"
+        //     });
+        // }
 
         const { Id: userId } = request.user!;
 
@@ -351,31 +370,36 @@ const deleteDiskon = async (request: AuthRequest, response: Response) => {
             return response.status(401).json({ status: false, message: "Unauthorized: Missing user ID" });
         }
 
-        const existingStan = await prisma.stan.findFirst({
-            where: { id_user: userId }
-        });
-
-        if (!existingStan) {
-            return response.status(401).json({ status: false, message: "Not found" });
+        const { Id } = request.params;
+        const dsId = Number(Id);
+        if (isNaN(dsId)) {
+            return response.status(401).json({ status: false, message: "Invalid ID" });
         }
 
-        // line
+        const findDiskon = await prisma.diskon.findFirst({ where: { Id: dsId } });
+        if (!findDiskon) {
+            return response.status(404).json({ status: false, message: `Diskon is not found` });
+        }
 
-        const { Id } = request.params;
+        // Get the stan belonging to the authenticated user
+        const userStan = await prisma.stan.findFirst({
+            where: { id_user: userId },
+        });
 
-        if (!Id) {
-            return response.status(400).json({
+        if (!userStan || userStan.Id !== findDiskon.id_stan) {
+            return response.status(403).json({
                 status: false,
-                message: "ID required"
+                message: "Forbidden: You do not have access to update this menu",
             });
         }
 
         // Convert Id to integer
-        const diskonId = parseInt(Id);
+        // const diskonId = parseInt(Id);
+        const diskonId = dsId;
 
         // Check if transaksi exists
         const existingDiskon = await prisma.diskon.findUnique({
-            where: { Id: diskonId, id_stan: existingStan.Id },
+            where: { Id: diskonId, },
             include: { menu_diskon: true }
 
         });
